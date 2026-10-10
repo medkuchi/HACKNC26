@@ -9,10 +9,62 @@ export interface NessieClientOptions {
 }
 
 export interface NessieClient {
+  createAccount(customerId: string, input: AccountCreationInput): Promise<Account>;
+  createCustomer(input: CustomerCreationInput): Promise<Customer>;
   getAccount(accountId: string): Promise<Account>;
   getCustomer(customerId: string): Promise<Customer>;
   getAccountPurchases(accountId: string): Promise<Purchase[]>;
   getAccountBills(accountId: string): Promise<Bill[]>;
+}
+
+/** Only cash accounts are offered by this forecast app. */
+export interface AccountCreationInput {
+  type: "Checking" | "Savings";
+  nickname: string;
+  balance: number;
+}
+
+export function parseAccountCreationInput(value: unknown): AccountCreationInput {
+  const row = object(value);
+  const nickname = stringField(row, "nickname").trim();
+  if (!nickname || nickname.length > 100) throw new TypeError("nickname must contain 1 to 100 characters");
+  return { type: enumField(row, "type", ["Checking", "Savings"]), nickname,
+    balance: numberField(row, "balance") };
+}
+
+/** Creation-only fields; address is not needed in the forecast's Customer type. */
+export interface CustomerCreationInput {
+  first_name: string;
+  last_name: string;
+  address?: {
+    street_number: string;
+    street_name: string;
+    city: string;
+    state: string;
+    zip: string;
+  };
+}
+
+/** Validate untrusted request JSON before calling Nessie or returning mock data. */
+export function parseCustomerCreationInput(value: unknown): CustomerCreationInput {
+  const row = object(value);
+  const name = (key: string): string => {
+    const result = stringField(row, key).trim();
+    if (!result || result.length > 100) throw new TypeError(`${key} must contain 1 to 100 characters`);
+    return result;
+  };
+  const input: CustomerCreationInput = { first_name: name("first_name"), last_name: name("last_name") };
+  if (row.address !== undefined) {
+    const address = object(row.address);
+    const field = (key: string): string => {
+      const result = stringField(address, key).trim();
+      if (!result) throw new TypeError(`address.${key} must be nonempty`);
+      return result;
+    };
+    input.address = { street_number: field("street_number"), street_name: field("street_name"),
+      city: field("city"), state: field("state"), zip: field("zip") };
+  }
+  return input;
 }
 
 type JsonObject = Record<string, unknown>;
@@ -86,19 +138,24 @@ function list<T>(value: unknown, parse: (item: unknown) => T): T[] {
   return value.map(parse);
 }
 
-/** Read-only server-side API client. Responses are uncached to avoid stale balances. */
+/** Server-side API client. Responses are uncached to avoid stale balances. */
 export function createNessieClient(options: NessieClientOptions): NessieClient {
   if (typeof window !== "undefined") throw new Error("Nessie client must run on the server");
   if (!options.apiKey.trim()) throw new Error("A Nessie API key is required");
   const base = new URL(options.baseUrl.endsWith("/") ? options.baseUrl : `${options.baseUrl}/`);
   if (base.protocol !== "https:") throw new Error("Nessie baseUrl must use HTTPS");
   const requestFetch = options.fetchImpl ?? fetch;
-  async function get(path: string): Promise<unknown> {
+  async function request(path: string, body?: CustomerCreationInput | (AccountCreationInput & { rewards: number })): Promise<unknown> {
     const url = new URL(path, base);
     url.searchParams.set("key", options.apiKey);
     let response: Response;
     try {
-      response = await requestFetch(url, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
+      response = await requestFetch(url, {
+        method: body === undefined ? "GET" : "POST",
+        headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        cache: "no-store", signal: AbortSignal.timeout(10_000),
+      });
     } catch {
       // Do not expose an error containing the URL, since it includes the API key.
       throw new Error("Nessie request failed or timed out");
@@ -112,9 +169,25 @@ export function createNessieClient(options: NessieClientOptions): NessieClient {
     return encodeURIComponent(value);
   };
   return {
-    getAccount: async accountId => parseAccount(await get(`accounts/${id(accountId)}`)),
-    getCustomer: async customerId => parseCustomer(await get(`customers/${id(customerId)}`)),
-    getAccountPurchases: async accountId => list(await get(`accounts/${id(accountId)}/purchases`), parsePurchase),
-    getAccountBills: async accountId => list(await get(`accounts/${id(accountId)}/bills`), parseBill),
+    createAccount: async (customerId, input) => {
+      const payload = parseAccountCreationInput(input);
+      // Rewards is a creation-request field only; forecasts do not use rewards.
+      const response = object(await request(`customers/${id(customerId)}/accounts`, { ...payload, rewards: 0 }));
+      const account = parseAccount(response.objectCreated);
+      if (account.customer_id !== customerId || account.type !== payload.type) {
+        throw new TypeError("Nessie returned an account for a different customer or account type");
+      }
+      return account;
+    },
+    createCustomer: async input => {
+      const payload = parseCustomerCreationInput(input);
+      if (!payload.address) throw new TypeError("An address is required to create a Nessie API customer");
+      const response = object(await request("customers", payload));
+      return parseCustomer(response.objectCreated);
+    },
+    getAccount: async accountId => parseAccount(await request(`accounts/${id(accountId)}`)),
+    getCustomer: async customerId => parseCustomer(await request(`customers/${id(customerId)}`)),
+    getAccountPurchases: async accountId => list(await request(`accounts/${id(accountId)}/purchases`), parsePurchase),
+    getAccountBills: async accountId => list(await request(`accounts/${id(accountId)}/bills`), parseBill),
   };
 }

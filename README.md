@@ -4,9 +4,9 @@ AI-powered financial companion that detects spending plans discussed in
 iMessage, forecasts their impact on the user's near-term finances, and
 alerts them privately through Nova before they commit.
 
-This repo is currently a **scaffold**: every file is a comment describing
-what it will contain and the features it's responsible for. No
-implementation code has been written yet.
+This repo is mostly a **scaffold**, with shared forecast/risk calculations
+and Nessie client, adapters, and customer/account/overview route handlers
+implemented. The full Next.js app and Supabase integration remain unfinished.
 
 ## Structure
 
@@ -35,3 +35,33 @@ Copy `.env.example` to `.env.local` in `apps/web` and `.env` in
 `apps/photon-agent`, filling in credentials. Where credentials are
 missing, mock adapters (`USE_MOCK_NESSIE`, `USE_MOCK_GEMINI`) let
 development continue without pretending mock data is real.
+
+## Testing Nessie routes
+
+From the repository root, run:
+
+```bash
+npm run test:nessie
+```
+
+This type-checks and runs customer creation, account creation/balance lookup,
+overview, and adapter tests without starting Next.js. Tests use mock data and
+fake HTTP responses; they do not need API credentials or contact Nessie.
+
+Implemented routes:
+
+- `POST /api/nessie/customer` — body: `first_name`, `last_name`; API mode also
+  requires an `address` object. Returns `customerId`, `customer`, `dataSource`.
+- `POST /api/nessie/account` — body: `customerId`, `type` (`Checking` or
+  `Savings`), `nickname`, `balance`. Returns `accountId`, `account`, `dataSource`.
+- `GET /api/nessie/account?accountId=...` — account details and current balance.
+- `GET /api/nessie/overview?accountId=...` — account, customer, purchases, bills,
+  balance, currency, source, and fetch timestamp.
+
+These are demo routes without authentication. Supabase integration examples
+are commented out until its client and database schema are implemented.
+Callers keep returned IDs. Created mock accounts are kept in server memory
+and disappear when that process restarts; other mock IDs use the $500 demo
+checking fixture. API mode requires `USE_MOCK_NESSIE=false`, `NESSIE_API_KEY`,
+and an HTTPS `NESSIE_BASE_URL`. The Next.js dependencies and startup scripts
+must be configured before testing these URLs through a running app.
