@@ -1,0 +1,4 @@
+// TypeScript configuration for the web app.
+// - Path aliases: "@/*" -> "src/*", "@hacknc26/shared" -> workspace package.
+// - Strict mode enabled; shared with packages/shared via project references
+//   if needed for cross-package type checking.

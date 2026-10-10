@@ -1,0 +1,7 @@
+/* Global stylesheet.
+   - Tailwind base/components/utilities imports.
+   - CSS custom properties for the Frutiger Aero palette (sky-blue, aqua,
+     turquoise, pastel-green, frosted-glass white) consumed by
+     tailwind.config.ts theme.extend.colors.
+   - Reusable utility classes for "glossy" card surfaces, soft shadows,
+     and gentle hover transitions used across dashboard + landing page. */

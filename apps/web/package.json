@@ -1,0 +1,9 @@
+{
+  "name": "@hacknc26/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bridge web app (Next.js). TODO deps: next, react, react-dom, typescript, tailwindcss, @supabase/supabase-js, @supabase/ssr, recharts, lucide-react, shadcn/ui-generated component deps (class-variance-authority, clsx, tailwind-merge, radix-ui primitives), @google/generative-ai. TODO scripts: dev, build, start, lint.",
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {}
+}

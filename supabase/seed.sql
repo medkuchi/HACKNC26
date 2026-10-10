@@ -1,0 +1,5 @@
+-- Local/demo seed data: a fictional demo user's spending_plans row
+-- matching the spec's example ("Weekend Trip to Charlotte", $150,
+-- Travel, Tentative, Saturday, $85 shortfall, High risk) for use in
+-- development and demos without needing live Nessie/Photon/Gemini
+-- credentials.

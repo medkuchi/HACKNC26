@@ -1,0 +1,4 @@
+// TypeScript configuration for the shared package.
+// - Framework-agnostic target (no DOM/Node-specific lib assumptions)
+//   since this package is imported by both the Next.js app and the
+//   plain Node.js photon-agent worker.

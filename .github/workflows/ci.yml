@@ -1,0 +1,2 @@
+# TODO: CI workflow — install (npm ci), typecheck/lint, build apps/web
+# and apps/photon-agent on push/PR to main.

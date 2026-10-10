@@ -1,0 +1,10 @@
+{
+  "name": "@hacknc26/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared deterministic forecast/risk engine and domain types, consumed by both apps/web and apps/photon-agent. TODO deps: typescript only (no framework deps — keep this package pure/runtime-agnostic).",
+  "main": "src/index.ts",
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {}
+}

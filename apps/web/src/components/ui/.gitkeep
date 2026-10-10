@@ -1,0 +1,4 @@
+Placeholder for shadcn/ui-generated components (button, card, dialog,
+input, select, tabs, badge, etc). These are intended to be generated
+via the shadcn CLI ("still deciding" per spec tech stack) rather than
+hand-written — this folder is left empty until that decision is made.

@@ -1,0 +1,21 @@
+-- Initial schema migration for Bridge (spec section 5 "Database").
+-- Tables to define:
+--   users                  -- mirrors Supabase auth.users; app-specific
+--                             profile fields (onboarding_completed, etc).
+--   nessie_accounts        -- links a user to their simulated Nessie
+--                             customer_id/account_id.
+--   financial_preferences  -- safety_buffer (default 100), alert
+--                             thresholds, per user.
+--   income_events          -- expected paycheck dates/amounts entered
+--                             during onboarding.
+--   spending_plans         -- name, estimated_cost, category,
+--                             expected_date, status, source, risk_score,
+--                             projected_impact, confidence.
+--   messaging_identities   -- Photon identity <-> user mapping,
+--                             verification status, pairing_code +
+--                             expiry for the Connect iMessage step.
+--   conversation_consents  -- per-conversation opt-in flags
+--                             (private vs. group), required before any
+--                             monitoring per spec section 3 Step 5.
+--   alerts                 -- generated Nova alerts/insights log.
+-- All tables should enable Row Level Security scoped to auth.uid().

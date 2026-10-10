@@ -1,0 +1,11 @@
+{
+  "name": "hacknc26",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bridge — AI-powered financial companion for HackNC 2026. npm workspaces monorepo: apps/web (Next.js), apps/photon-agent (persistent iMessage worker), packages/shared (forecast engine + domain types).",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {}
+}
