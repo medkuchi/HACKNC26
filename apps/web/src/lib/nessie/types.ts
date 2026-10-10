@@ -6,9 +6,7 @@ export type {
   BillStatus,
   Customer,
   FinancialOverview,
-  Merchant,
   Purchase,
   PurchaseMedium,
   PurchaseStatus,
-  Transaction,
 } from "@hacknc26/shared";
