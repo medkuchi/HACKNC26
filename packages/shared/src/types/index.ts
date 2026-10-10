@@ -2,5 +2,7 @@
 // nessie.ts, forecast/types.ts) under the @hacknc26/shared package.
 
 export * from "./user";
+export type * from "./plan";
+export type * from "./nessie";
 
 export type * from "../forecast/types";
