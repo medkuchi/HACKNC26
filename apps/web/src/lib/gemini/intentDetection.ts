@@ -1,6 +1,24 @@
-// Spending-intent detection logic built on lib/gemini/client.ts +
-// prompts.ts. Takes raw message text (+ conversation context) and
-// returns a structured, validated intent object. Performs NO financial
-// math itself — purely NLP extraction, per spec section 6 ("financial
-// arithmetic must be performed by deterministic backend code, not
-// Gemini").
+import { generateText } from "./client";
+import { intentDetectionPrompt } from "./prompts";
+
+export interface DetectedIntent {
+  detected: boolean;
+  description?: string;
+  estimatedCost?: number;
+  currency?: string;
+  expectedDate?: string;
+  category?: string;
+  isParticipant?: boolean;
+  isTentative?: boolean;
+  confidence?: number;
+}
+
+export async function detectSpendingIntent(message: string): Promise<DetectedIntent> {
+  const raw = await generateText(intentDetectionPrompt(message));
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return { detected: false };
+  }
+}
