@@ -19,7 +19,6 @@ export interface Account {
   customer_id: string;
   type: AccountType;
   nickname: string;
-  //rewards: number;
   balance: number;
   account_number?: string;
 }
@@ -56,25 +55,6 @@ export interface Bill {
   creation_date?: string;
 }
 
-}
-
-/** App-normalized history item, not a separate Nessie API resource. */
-export interface Transaction {
-  id: string;
-  accountId: string;
-  type: "purchase" | "deposit" | "withdrawal" | "transfer";
-  /** Explicit direction; amount is always finite and nonnegative. */
-  direction: "credit" | "debit";
-  amount: number;
-  currency: string;
-  /** Normalized YYYY-MM-DD date. */
-  date: string;
-  status: PurchaseStatus;
-  description?: string;
-  merchantId?: string;
-  category?: string;
-}
-
 /**
  * App-level snapshot for one selected account, assembled by the adapter.
  * Historical purchases must not be subtracted from currentBalance again.
@@ -82,12 +62,15 @@ export interface Transaction {
  */
 export interface FinancialOverview {
   customer: Customer;
+  /** Forecast adapters accept Checking/Savings accounts, not Credit Card balances. */
   account: Account;
   /** The selected account's balance, not a sum that includes credit-card debt. */
   currentBalance: number;
   /** Supplied by the adapter; Nessie entities do not carry a currency field. */
   currency: string;
+  /** Historical records for detecting repeated charges; not future obligations. */
   purchases: Purchase[];
+  /** Scheduled bills; adapters select unpaid occurrences and expand recurrence. */
   bills: Bill[];
   /** Both sources are simulated; mock specifically means local demo fixtures. */
   dataSource: "nessie" | "mock";
