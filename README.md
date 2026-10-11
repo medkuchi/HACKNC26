@@ -1,4 +1,4 @@
-# Bridge — HackNC 2026
+# Breezey— HackNC 2026
 
 AI-powered financial companion that detects spending plans discussed in
 iMessage, forecasts their impact on the user's near-term finances, and
