@@ -46,6 +46,18 @@ export function createPhotonHandlers(
   if (!Number.isInteger(limit) || limit < 1) throw new TypeError("dedupeLimit must be a positive integer");
   const inFlight = new Set<string>();
   const completed = new Set<string>();
+  // space.type isn't a documented Spectrum field; getMembers() throwing on a DM
+  // (and resolving on a group) is the only confirmed way to tell them apart.
+  const conversationIsGroup = new Map<string, boolean>();
+  async function resolveIsGroup(space: Space): Promise<boolean> {
+    const cached = conversationIsGroup.get(space.id);
+    if (cached !== undefined) return cached;
+    let isGroup: boolean;
+    try { await space.getMembers(); isGroup = true; }
+    catch { isGroup = false; }
+    conversationIsGroup.set(space.id, isGroup);
+    return isGroup;
+  }
 
   async function handleMessage(space: Space, message: Message,
     requestOptions: BridgeRequestOptions = {}): Promise<MessageHandlingResult> {
@@ -56,9 +68,7 @@ export function createPhotonHandlers(
     if (message.content.type !== "text" || !message.content.text.trim()) return ignored("unsupported_content");
     const senderId = message.sender?.id?.trim();
     if (!senderId || !space.id?.trim() || !message.id?.trim() || message.space.id !== space.id) return ignored("unidentified");
-    const type = (space as Space & { type?: unknown }).type;
-    if (type !== "dm" && type !== "group") return ignored("unknown_conversation_type");
-    const isGroup = type === "group";
+    const isGroup = await resolveIsGroup(space);
     const text = message.content.text;
     const key = JSON.stringify([space.id, message.id]);
     if (inFlight.has(key) || completed.has(key)) return { status: "duplicate" };
