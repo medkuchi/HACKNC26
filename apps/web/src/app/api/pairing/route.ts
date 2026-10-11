@@ -1,5 +1,18 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createPairingCode, verifyPairingCode } from "@/lib/pairing/store";
+
+// hash both sides first since timingSafeEqual throws on unequal-length buffers
+function isAuthorizedWorker(req: NextRequest): boolean {
+  const expected = process.env.PHOTON_AGENT_SHARED_SECRET?.trim();
+  if (!expected) return false;
+
+  const provided = /^Bearer (.+)$/i.exec(req.headers.get("Authorization") ?? "")?.[1];
+  if (!provided) return false;
+
+  const hash = (value: string) => createHash("sha256").update(value).digest();
+  return timingSafeEqual(hash(provided), hash(expected));
+}
 
 export async function POST(req: NextRequest) {
   const { userId } = await req.json();
@@ -14,6 +27,10 @@ export async function POST(req: NextRequest) {
 
 // called by apps/photon-agent when an incoming iMessage looks like a pairing code
 export async function PATCH(req: NextRequest) {
+  if (!isAuthorizedWorker(req)) {
+    return NextResponse.json({ error: "Unauthorized worker request" }, { status: 401 });
+  }
+
   const { code } = await req.json();
 
   if (!code) {
