@@ -169,4 +169,20 @@ Concurrent duplicate attempts share verification; a different code from the
 same sender returns busy. The initiating attempt's cancellation applies to
 shared verification. Backend failures advise generating a fresh code because
 the previous request may already have consumed it. No raw codes are logged or
-persisted. Pairing is not yet wired into the worker's message handler.
+persisted.
+
+`photon/handlers.ts` provides `createPhotonHandlers(client, bridge)` with
+`handleMessage(space, message)` and `run({ signal })`. It ignores outbound,
+agent-authored, nontext, and unidentified events; routes pairing first; then
+requires a verified identity and explicit conversation consent before calling
+the financial backend. Duplicate event IDs are remembered in a bounded cache
+within the worker process, and the backend should persist its own deduplication.
+
+A paired sender can send `monitor on` or `monitor off`. These commands affect
+only their messages in that conversation, including a specifically selected
+group; they do not authorize other participants. Replies triggered by group
+messages are delivered privately using the same agent phone line. Backend
+replies are suppressed if consent or pairing is revoked while processing.
+Aborting `run()` stops the client and waits for shutdown. Worker `index.ts`
+still needs startup and signal-handler wiring; the backend message webhook
+also remains to be implemented.

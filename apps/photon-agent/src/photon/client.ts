@@ -11,6 +11,7 @@ export interface PhotonRuntime {
   messages: AsyncIterable<[Space, Message]>;
   send(space: Space, text: string): Promise<Message | undefined>;
   stop(): Promise<void>;
+  createDirectSpace?(senderId: string, sourceSpace: Space): Promise<Space>;
 }
 export interface PhotonClientOptions {
   connect?: (config: PhotonAgentConfig) => Promise<PhotonRuntime>;
@@ -22,6 +23,7 @@ export interface PhotonClient {
   readonly closed: boolean;
   sendText(space: Space, text: string): Promise<Message | undefined>;
   reply(message: Message, text: string): Promise<Message | undefined>;
+  sendDirectText(senderId: string, text: string, sourceSpace: Space): Promise<Message | undefined>;
   stop(): Promise<void>;
 }
 
@@ -30,7 +32,7 @@ async function connectSpectrum(config: PhotonAgentConfig): Promise<PhotonRuntime
   const [{ Spectrum }, { imessage }] = await Promise.all([
     import("spectrum-ts"), import("spectrum-ts/providers/imessage"),
   ]);
-  return Spectrum({
+  const app = await Spectrum({
     projectId: config.photonProjectId,
     // PHOTON_API_KEY contains the Spectrum project secret, not a line token.
     projectSecret: config.photonApiKey,
@@ -38,6 +40,15 @@ async function connectSpectrum(config: PhotonAgentConfig): Promise<PhotonRuntime
     telemetry: false,
     options: { flattenGroups: true, logLevel: "error" },
   });
+  const provider = imessage(app);
+  return {
+    messages: app.messages,
+    send: (space, text) => app.send(space, text),
+    stop: () => app.stop(),
+    createDirectSpace: (senderId, sourceSpace) => provider.space.create(senderId, {
+      phone: imessage(sourceSpace).phone,
+    }),
+  };
 }
 
 /** Initialize one connection; importing this module never opens a connection. */
@@ -105,6 +116,25 @@ export async function createPhotonClient(
       catch (error) {
         log.error("photon.reply_failed", { conversationId: message.space.id, error });
         throw new Error("Unable to send Photon reply");
+      }
+    },
+    async sendDirectText(senderId: string, text: string, sourceSpace: Space) {
+      assertOpen();
+      validateText(text);
+      if (!senderId.trim() || sourceSpace.__platform !== "imessage") {
+        throw new TypeError("Private delivery requires a sender and iMessage source conversation");
+      }
+      if (!runtime.createDirectSpace) throw new Error("Private iMessage delivery is unavailable");
+      try {
+        const direct = await runtime.createDirectSpace(senderId.trim(), sourceSpace);
+        if (direct.__platform !== "imessage" || (direct as Space & { type?: unknown }).type !== "dm") {
+          throw new Error("Private delivery did not resolve a direct conversation");
+        }
+        assertOpen();
+        return await runtime.send(direct, text);
+      } catch (error) {
+        log.error("photon.private_send_failed", { error });
+        throw new Error("Unable to send private Photon text message");
       }
     },
     stop(): Promise<void> {
