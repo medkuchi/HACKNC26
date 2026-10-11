@@ -12,3 +12,5 @@ build/
 *.log
 .turbo/
 .vercel/
+apps/web/.env.local
+apps/phone-agent/.env.example
