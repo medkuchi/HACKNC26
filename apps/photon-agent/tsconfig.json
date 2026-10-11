@@ -1,4 +1,15 @@
-// TypeScript configuration for the photon-agent worker.
-// - Targets Node.js runtime (not DOM lib), CommonJS or ESM depending on
-//   how the Photon Spectrum SDK ships.
-// - Path alias to @hacknc26/shared for shared types.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "types": ["node"],
+    "strict": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts", "node_modules", "dist"]
+}

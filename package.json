@@ -11,7 +11,8 @@
     "test:nessie": "node scripts/test-nessie.cjs",
     "test:forecast": "node scripts/test-nessie.cjs forecast",
     "test:plans": "node scripts/test-nessie.cjs plans",
-    "test:hooks": "node scripts/test-hooks.cjs"
+    "test:hooks": "node scripts/test-hooks.cjs",
+    "test:agent": "node scripts/test-nessie.cjs agent"
   },
   "dependencies": {
     "typescript": "^7.0.2"
