@@ -8,7 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "test:nessie": "node scripts/test-nessie.cjs"
+    "test:nessie": "node scripts/test-nessie.cjs",
+    "test:forecast": "node scripts/test-nessie.cjs forecast"
   },
   "dependencies": {
     "typescript": "^7.0.2"
