@@ -2,12 +2,19 @@
   "name": "@hacknc26/photon-agent",
   "version": "0.1.0",
   "private": true,
-  "description": "Persistent Node.js worker running the Photon Spectrum iMessage agent for Nova. TODO deps: photon spectrum sdk package, typescript, tsx/ts-node for dev, dotenv. TODO scripts: dev, build, start.",
+  "description": "Persistent Node.js worker running the Photon Spectrum iMessage agent for Nova.",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc --project tsconfig.json",
+    "start": "node dist/index.js"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5"
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15"
   },
   "dependencies": {
     "spectrum-ts": "^12.10.1"

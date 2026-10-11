@@ -123,8 +123,8 @@ events are yielded. `client.sendText(space, text)` sends to an existing
 conversation, and `client.reply(message, text)` replies to an inbound message.
 The handler layer still needs to enforce pairing and conversation consent.
 Call `stopPhotonClient()` during shutdown. Importing the module alone does not
-connect, send messages, or install signal handlers. Worker entry-point wiring
-and automatic reconnect remain separate work.
+connect, send messages, or install signal handlers. The worker entry point
+starts this client and reconnects after terminal stream failures.
 
 Run config, logger, and client tests without contacting Photon:
 
@@ -139,7 +139,8 @@ strict checks still apply to the agent's source.
 The agent's `services/bridgeApiClient.ts` exposes
 `createBridgeApiClient(loadConfig())`, with `verifyPairingCode(code)` and
 `forwardMessage(event)`. Requests use `Authorization: Bearer` with
-`PHOTON_AGENT_SHARED_SECRET`, a 10-second default timeout, response validation,
+`PHOTON_AGENT_SHARED_SECRET`, default timeouts of 10 seconds for pairing and
+30 seconds for message analysis/forecasting, response validation,
 and no automatic retries. Both worker and web app must use the same secret.
 Only operational metadata is logged; request bodies and pairing codes are not.
 
@@ -151,8 +152,8 @@ null means no reply. These contracts are shared in
 `packages/shared/src/types/photon.ts`. Pairing and conversation consent must be
 checked by the handler before forwarding a message.
 
-Live forwarding still requires implementation of the backend webhook handler.
-The existing pairing route also needs server-side shared-secret verification;
+The backend webhook handler is implemented for the single-user demo.
+The existing pairing route still needs server-side shared-secret verification;
 sending the header alone does not add that enforcement. Client tests run
 offline as part of `npm run test:agent`.
 
@@ -169,4 +170,92 @@ Concurrent duplicate attempts share verification; a different code from the
 same sender returns busy. The initiating attempt's cancellation applies to
 shared verification. Backend failures advise generating a fresh code because
 the previous request may already have consumed it. No raw codes are logged or
-persisted. Pairing is not yet wired into the worker's message handler.
+persisted.
+
+`photon/handlers.ts` provides `createPhotonHandlers(client, bridge)` with
+`handleMessage(space, message)` and `run({ signal })`. It ignores outbound,
+agent-authored, nontext, and unidentified events; routes pairing first; then
+requires a verified identity and explicit conversation consent before calling
+the financial backend. Duplicate event IDs are remembered in a bounded cache
+within the worker process, and the backend should persist its own deduplication.
+
+A paired sender can send `monitor on` or `monitor off`. These commands affect
+only their messages in that conversation, including a specifically selected
+group; they do not authorize other participants. Replies triggered by group
+messages are delivered privately using the same agent phone line. Backend
+replies are suppressed if consent or pairing is revoked while processing.
+Aborting `run()` stops the client and waits for shutdown. Worker `index.ts`
+wires startup and signal handlers; the backend webhook handles spending plans
+for the paired `demo-user` profile.
+
+## Photon webhook
+
+`POST /api/photon/webhook` verifies the worker's Bearer shared secret and accepts
+the shared message contract above. Pair with `userId: "demo-user"` while
+Supabase is deferred. Other user IDs return 403 rather than sharing this
+profile's finances. Gemini detects the sender's spending intent; sufficiently
+confident plans with a cost, currency, and future date are saved to the same
+temporary store used by `/api/plans`.
+
+Within the next 30 UTC calendar days, the webhook compares the forecast before
+and after adding the new plan, including existing tentative/confirmed plans in
+the account currency and known Nessie bills. It saves the new plan's incremental
+balance impact and risk score, then returns `{ replyText, planId }`. Replies use
+calculated monetary values and label mock data. There are currently no saved
+future income events or additional user-configured recurring expenses. Dates
+beyond the window are saved with null forecast values. Uncertain/third-party
+messages return `{ replyText: null }`; incomplete details prompt clarification.
+
+Use the same `PHOTON_AGENT_SHARED_SECRET` in the web app and worker. Optional
+`PHOTON_DEMO_ACCOUNT_ID` selects a mock account (default `demo`); live Nessie
+requires the actual account ID. `PHOTON_DEMO_SAFETY_BUFFER` defaults to 100.
+Live Gemini uses `GOOGLE_GEMINI_API_KEY` and configurable `GEMINI_MODEL`.
+Gemini requests time out after eight seconds; Nessie requests time out after
+10 seconds each. Network failures can still prevent reply delivery after a
+plan is saved; webhook deduplication avoids repeating a recent successful
+creation if that message is forwarded again in the same process.
+
+With `USE_MOCK_GEMINI=true`, detection accepts this exact demo template:
+
+```text
+I plan to spend $120 on dinner on 2026-10-15
+```
+
+Replace the date with a future date; `I might spend ...` creates a tentative
+plan. Mock detection does not interpret general conversation. Test the route
+without credentials, live API requests, or a Next.js server:
+
+```bash
+npm run test:webhook
+```
+
+Repeated message IDs share one result in a bounded, 24-hour process cache;
+conflicting payloads return 409. Plans and deduplication disappear on restart
+and are not shared between server instances. A future Supabase transaction must
+save a unique message ID alongside the plan for durable deduplication.
+
+## Running the Photon worker
+
+Copy `apps/photon-agent/.env.example` to `apps/photon-agent/.env` and fill in
+the project ID, project secret, Bridge backend URL, and shared secret. Requires
+Node 22 or later. From the repository root, start development mode with:
+
+```bash
+npm run dev --workspace @hacknc26/photon-agent
+```
+
+Or build and run the compiled worker:
+
+```bash
+npm run build --workspace @hacknc26/photon-agent
+npm run start --workspace @hacknc26/photon-agent
+```
+
+The entry point loads configuration, creates the backend client, and consumes
+incoming messages. It preserves pairing, consent, and handler deduplication
+across Photon reconnects. Terminal failures close the old client before up to
+five reconnect attempts, with delays starting at one second and capped at
+30 seconds. A connection lasting at least a minute resets the retry count.
+Ctrl+C or SIGTERM aborts processing and closes the client, with a 15-second
+escape timeout for stalled cleanup. A fatal failure exits with a nonzero code.
+Running these commands connects to Photon; `npm run test:agent` stays offline.

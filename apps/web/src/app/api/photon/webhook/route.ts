@@ -1,9 +1,10 @@
-// POST /api/photon/webhook
-// Receives forwarded, already-identified iMessage events from the
-// apps/photon-agent persistent worker (sender, conversation id,
-// private-vs-group flag, message text). Authenticates the request via
-// PHOTON_AGENT_SHARED_SECRET. Orchestrates: Gemini intent detection ->
-// forecast engine risk check -> plan creation -> Nova reply text ->
-// hands the reply back to photon-agent to send over iMessage. This is
-// the single backend entry point described in spec section 8's message
-// flow (no separate post-Gemini component).
+import { createPhotonWebhookHandler } from "../../../../lib/photon/webhook";
+
+export const runtime = "nodejs";
+
+/** POST /api/photon/webhook — authenticated worker message -> plan + Nova reply. */
+export const POST = createPhotonWebhookHandler();
+
+// FUTURE SUPABASE: resolve the paired user's account, preferences, income, and
+// plans from the database. Persist the message ID and plan in one transaction
+// for deduplication across restarts and multiple server instances.

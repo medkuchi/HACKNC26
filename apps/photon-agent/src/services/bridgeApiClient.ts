@@ -6,6 +6,7 @@ import type { Logger } from "../logger";
 export type BridgeApiConfig = Pick<PhotonAgentConfig, "bridgeApiBaseUrl" | "photonAgentSharedSecret">;
 export interface BridgeApiClientOptions {
   fetchImpl?: typeof fetch;
+  /** Override both defaults: pairing 10s, message analysis/forecasting 30s. */
   timeoutMs?: number;
   logger?: Logger;
 }
@@ -49,7 +50,8 @@ export function createBridgeApiClient(config: BridgeApiConfig, options: BridgeAp
   async function request(path: string, method: "PATCH" | "POST", body: unknown,
     requestOptions: BridgeRequestOptions = {}, allowNotFound = false): Promise<{ status: number; payload: unknown }> {
     const started = Date.now();
-    const timeout = AbortSignal.timeout(timeoutMs);
+    // Gemini can take 8s and Nessie performs up to two 10s request stages.
+    const timeout = AbortSignal.timeout(options.timeoutMs ?? (path === "api/photon/webhook" ? 30_000 : timeoutMs));
     const signal = requestOptions.signal ? AbortSignal.any([timeout, requestOptions.signal]) : timeout;
     const eventType = path === "api/pairing" ? "pairing.verify" : "message.forward";
     const abortError = (): BridgeApiError => requestOptions.signal?.aborted ?
