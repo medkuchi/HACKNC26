@@ -12,10 +12,16 @@ const forecastSuites = [
   "packages/shared/src/forecast/risk.test",
 ];
 const planSuites = [
+  "apps/web/src/lib/gemini/alternatives.test",
+  "apps/web/src/app/api/plans/[id]/alternatives/route.test",
+  "apps/web/src/lib/plans/store.test",
   "apps/web/src/app/api/plans/route.test",
   "apps/web/src/app/api/plans/[id]/route.test",
 ];
-const webhookSuites = ["apps/web/src/app/api/photon/webhook/route.test"];
+const webhookSuites = [
+  "apps/web/src/lib/gemini/client.test",
+  "apps/web/src/app/api/photon/webhook/route.test",
+];
 const agentSuites = [
   "apps/photon-agent/src/index.test",
   "apps/photon-agent/src/config.test",
