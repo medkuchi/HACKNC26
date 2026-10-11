@@ -5,3 +5,13 @@
 //   relevant plan (My Plans) or forecast date range.
 // - Distinct from the passive "Nova insights" feed on the Overview page —
 //   this page is specifically for items awaiting user action.
+
+import PlaceholderPage from "@/components/PlaceholderPage";
+
+export default function Page() {
+  return (
+    <PlaceholderPage
+      title="Action center"
+    />
+  );
+}

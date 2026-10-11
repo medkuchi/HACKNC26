@@ -5,3 +5,10 @@
 // - Persists in-progress onboarding state (e.g. via a server action or
 //   local state synced to Supabase) so users can resume if they leave.
 // - Protected route: requires an authenticated Supabase session.
+
+import type { ReactNode } from "react";
+
+// The onboarding pages are available without authentication during the demo.
+export default function OnboardingLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>;
+}

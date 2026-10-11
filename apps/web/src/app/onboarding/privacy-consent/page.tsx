@@ -7,3 +7,13 @@
 //   OFF by default and must be explicitly enabled per-conversation.
 // - Completing this step marks onboarding as finished and redirects to
 //   /dashboard.
+
+import PlaceholderPage from "@/components/PlaceholderPage";
+
+export default function Page() {
+  return (
+    <PlaceholderPage
+      title="Privacy consent"
+    />
+  );
+}

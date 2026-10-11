@@ -7,3 +7,13 @@
 //   worker receives the code back via an incoming iMessage, then links
 //   the verified messaging identity to the authenticated Supabase user.
 // - Shows connection success/failure state; allows "Skip for now".
+
+import PlaceholderPage from "@/components/PlaceholderPage";
+
+export default function Page() {
+  return (
+    <PlaceholderPage
+      title="Connect iMessage"
+    />
+  );
+}
