@@ -10,6 +10,10 @@ export type UpdatePlanInput = Partial<Omit<CreatePlanInput, "confidence">> & { c
 export interface UsePlansOptions {
   status?: PlanStatus;
   enabled?: boolean;
+  /** Refresh while the page is visible; omitted disables polling. */
+  pollIntervalMs?: number;
+  /** Refresh when the window gains focus or the page becomes visible. */
+  refreshOnFocus?: boolean;
 }
 export interface UsePlansResult {
   plans: Plan[];
@@ -26,6 +30,7 @@ interface ListState {
   key: string | null;
   plans: Plan[];
   loading: boolean;
+  hasLoaded: boolean;
   error: string | null;
 }
 
@@ -33,15 +38,22 @@ interface ListState {
 export function usePlans(options: UsePlansOptions = {}): UsePlansResult {
   const enabled = options.enabled !== false;
   const requestKey = enabled ? `/api/plans${options.status ? `?status=${encodeURIComponent(options.status)}` : ""}` : null;
-  const [state, setState] = useState<ListState>({ key: null, plans: [], loading: false, error: null });
-  const [refresh, setRefresh] = useState(0);
+  const pollIntervalMs = Number.isFinite(options.pollIntervalMs) && options.pollIntervalMs! > 0
+    ? options.pollIntervalMs : undefined;
+  const refreshOnFocus = options.refreshOnFocus === true;
+  const [state, setState] = useState<ListState>({ key: null, plans: [], loading: false, hasLoaded: false, error: null });
+  const [refresh, setRefresh] = useState({ revision: 0, background: false });
   const [pending, setPending] = useState(0);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const mounted = useRef(false);
   const version = useRef(0);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const mutations = useRef(new Set<AbortController>());
-  const refetch = useCallback(() => setRefresh(value => value + 1), []);
+  const activeLoad = useRef<AbortController | null>(null);
+  const pendingMutations = useRef(0);
+  const backgroundPending = useRef(false);
+  const lastRequestKey = useRef<string | null>(null);
+  const refetch = useCallback(() => setRefresh(value => ({ revision: value.revision + 1, background: false })), []);
 
   useEffect(() => {
     mounted.current = true;
@@ -55,14 +67,19 @@ export function usePlans(options: UsePlansOptions = {}): UsePlansResult {
 
   useEffect(() => {
     const currentVersion = ++version.current;
-    setMutationError(null);
+    const background = refresh.background && lastRequestKey.current === requestKey;
+    lastRequestKey.current = requestKey;
+    backgroundPending.current = false;
+    if (!background) setMutationError(null);
     if (requestKey === null) {
-      setState({ key: null, plans: [], loading: false, error: null });
+      setState({ key: null, plans: [], loading: false, hasLoaded: false, error: null });
       return;
     }
     const controller = new AbortController();
+    activeLoad.current = controller;
     setState(previous => ({ key: requestKey, plans: previous.key === requestKey ? previous.plans : [],
-      loading: true, error: null }));
+      loading: !background || previous.key !== requestKey || !previous.hasLoaded,
+      hasLoaded: previous.key === requestKey && previous.hasLoaded, error: null }));
     async function load(): Promise<void> {
       try {
         const response = await fetch(requestKey!, { cache: "no-store", signal: controller.signal });
@@ -71,23 +88,52 @@ export function usePlans(options: UsePlansOptions = {}): UsePlansResult {
           throw new Error("The plans server returned an invalid response");
         }
         if (!controller.signal.aborted && currentVersion === version.current) {
-          setState({ key: requestKey, plans: payload.plans, loading: false, error: null });
+          setState({ key: requestKey, plans: payload.plans, loading: false, hasLoaded: true, error: null });
         }
       } catch (error) {
         if (!controller.signal.aborted && currentVersion === version.current) {
           setState(previous => ({ key: requestKey, plans: previous.key === requestKey ? previous.plans : [],
-            loading: false, error: message(error) }));
+            loading: false, hasLoaded: previous.key === requestKey && previous.hasLoaded, error: message(error) }));
         }
+      } finally {
+        if (activeLoad.current === controller) activeLoad.current = null;
       }
     }
     void load();
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      if (activeLoad.current === controller) activeLoad.current = null;
+    };
   }, [requestKey, refresh]);
+
+  useEffect(() => {
+    if (requestKey === null || (pollIntervalMs === undefined && !refreshOnFocus)) return;
+    const refreshInBackground = () => {
+      // Do not abort a slower request or an edit when the next timer fires.
+      if (!mounted.current || document.visibilityState === "hidden" || activeLoad.current ||
+          pendingMutations.current > 0 || backgroundPending.current) return;
+      backgroundPending.current = true;
+      setRefresh(value => ({ revision: value.revision + 1, background: true }));
+    };
+    const timer = pollIntervalMs === undefined ? undefined : window.setInterval(refreshInBackground, pollIntervalMs);
+    if (refreshOnFocus) {
+      window.addEventListener("focus", refreshInBackground);
+      document.addEventListener("visibilitychange", refreshInBackground);
+    }
+    return () => {
+      if (timer !== undefined) window.clearInterval(timer);
+      if (refreshOnFocus) {
+        window.removeEventListener("focus", refreshInBackground);
+        document.removeEventListener("visibilitychange", refreshInBackground);
+      }
+    };
+  }, [requestKey, pollIntervalMs, refreshOnFocus]);
 
   const mutate = useCallback((method: "POST" | "PATCH" | "DELETE", id?: string,
     input?: CreatePlanInput | UpdatePlanInput): Promise<Plan | null> => {
     if (!mounted.current || !enabled) return Promise.reject(new Error("The plans hook is inactive"));
     if (method !== "POST" && !id?.trim()) return Promise.reject(new Error("A plan ID is required"));
+    pendingMutations.current++;
     setPending(value => value + 1);
     const operation = queue.current.then(async () => {
       if (!mounted.current) throw new Error("The plans hook is inactive");
@@ -107,7 +153,7 @@ export function usePlans(options: UsePlansOptions = {}): UsePlansResult {
         if (mounted.current && !controller.signal.aborted) {
           // An older GET must not replace the list after a successful edit.
           version.current++;
-          setRefresh(value => value + 1);
+          setRefresh(value => ({ revision: value.revision + 1, background: false }));
         }
         return plan;
       } catch (error) {
@@ -119,7 +165,10 @@ export function usePlans(options: UsePlansOptions = {}): UsePlansResult {
     });
     // A rejected edit must not prevent later queued edits from running.
     queue.current = operation.then(() => undefined, () => undefined);
-    return operation.finally(() => { if (mounted.current) setPending(value => value - 1); });
+    return operation.finally(() => {
+      pendingMutations.current--;
+      if (mounted.current) setPending(value => value - 1);
+    });
   }, [enabled]);
 
   const createPlan = useCallback(async (input: CreatePlanInput): Promise<Plan> =>

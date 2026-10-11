@@ -13,7 +13,8 @@
     "test:plans": "node scripts/test-nessie.cjs plans",
     "test:webhook": "node scripts/test-nessie.cjs webhook",
     "test:hooks": "node scripts/test-hooks.cjs",
-    "test:agent": "node scripts/test-nessie.cjs agent"
+    "test:agent": "node scripts/test-nessie.cjs agent",
+    "test:dashboard": "node scripts/test-dashboard.cjs"
   },
   "dependencies": {
     "typescript": "^7.0.2"
