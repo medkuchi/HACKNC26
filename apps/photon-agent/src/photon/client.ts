@@ -82,6 +82,12 @@ export async function createPhotonClient(
       try {
         for await (const [space, message] of runtime.messages) {
           if (closed || stopping) break;
+          // Temporary diagnostic: confirms whether group messages even reach this
+          // process before the platform/direction filter below. Run with
+          // LOG_LEVEL=debug to see it. Remove once group delivery is confirmed.
+          log.debug("photon.raw_message", {
+            eventType: `platform=${message.platform ?? "undefined"} direction=${message.direction ?? "undefined"} spaceId=${space.id ?? "undefined"}`,
+          });
           if (message.platform !== "imessage" || message.direction !== "inbound") continue;
           yield [space, message];
         }
