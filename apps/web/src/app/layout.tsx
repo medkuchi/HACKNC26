@@ -10,8 +10,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Bridge — Your financial outlook",
-  description: "Plan ahead with Bridge: spending plans, financial forecasts, and Nova insights.",
+  title: "Breezey — Your financial outlook",
+  description: "Plan ahead with Breezey: spending plans, financial forecasts, and Breezey insights.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

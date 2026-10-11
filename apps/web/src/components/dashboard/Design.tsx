@@ -33,7 +33,7 @@ type NovaVariant =
 export function NovaMascot({
   size = 72,
   variant = "core",
-  label = "Nova, your financial guide",
+  label = "Breezey, your financial guide",
 }: {
   size?: number;
   variant?: NovaVariant;
