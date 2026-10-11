@@ -19,11 +19,19 @@ export interface BridgeApiClient {
 }
 export type BridgeApiErrorKind = "http" | "network" | "timeout" | "aborted" | "invalid_response";
 export class BridgeApiError extends Error {
-  constructor(message: string, readonly kind: BridgeApiErrorKind, readonly statusCode?: number) {
+  constructor(message: string, readonly kind: BridgeApiErrorKind, readonly statusCode?: number,
+    readonly code?: string) {
     super(message);
     this.name = "BridgeApiError";
   }
 }
+
+const backendErrorCodes = new Set([
+  "GEMINI_AUTH_ERROR", "GEMINI_QUOTA_EXCEEDED", "GEMINI_MODEL_UNAVAILABLE",
+  "GEMINI_INVALID_REQUEST", "GEMINI_UNAVAILABLE", "GEMINI_TIMEOUT",
+  "GEMINI_NETWORK_ERROR", "GEMINI_INVALID_RESPONSE", "GEMINI_CONFIGURATION_ERROR",
+  "GEMINI_ANALYSIS_ERROR", "NESSIE_DATA_ERROR",
+]);
 
 /**
  * Worker-to-backend HTTP client. The backend must verify the Bearer shared secret.
@@ -65,7 +73,16 @@ export function createBridgeApiClient(config: BridgeApiConfig, options: BridgeAp
       });
       if (signal.aborted) throw abortError();
       if (!response.ok && !(allowNotFound && response.status === 404)) {
-        throw new BridgeApiError(`Bridge API request failed with HTTP ${response.status}`, "http", response.status);
+        let code: string | undefined;
+        try {
+          const failure: unknown = await response.json();
+          if (object(failure)) {
+            if (typeof failure.code === "string" && backendErrorCodes.has(failure.code)) code = failure.code;
+            else if (failure.error === "Unable to load financial data") code = "NESSIE_DATA_ERROR";
+          }
+        } catch { /* Error bodies are optional; never log their raw contents. */ }
+        if (signal.aborted) throw abortError();
+        throw new BridgeApiError(`Bridge API request failed with HTTP ${response.status}`, "http", response.status, code);
       }
       let payload: unknown;
       try { payload = await response.json(); }
