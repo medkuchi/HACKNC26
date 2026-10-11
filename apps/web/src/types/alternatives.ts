@@ -37,7 +37,7 @@ export interface PlanAlternativesResponse {
 
 export interface PlanAlternativesRequest {
   accountId: string;
-  range: 7 | 14 | 30;
+  range: 7 | 14 | 30 | 60 | 90;
   safetyBuffer: number;
   startDate?: string;
 }

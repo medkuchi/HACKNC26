@@ -315,3 +315,28 @@ five reconnect attempts, with delays starting at one second and capped at
 Ctrl+C or SIGTERM aborts processing and closes the client, with a 15-second
 escape timeout for stalled cleanup. A fatal failure exits with a nonzero code.
 Running these commands connects to Photon; `npm run test:agent` stays offline.
+
+## Saved income and recurring expenses
+
+Dashboard Settings has an Income & expenses form shared by the dashboard,
+Breezey, and plan alternative forecasts. This single-user local schedule is
+saved in `apps/web/.data/financial-schedule.json` when Next.js runs from the web
+workspace (or `BRIDGE_DEMO_DATA_DIR`). These USD forecast assumptions do not
+create Nessie transactions or change the current balance. Do not enter the
+same expense both here and as a Nessie bill.
+
+The configured schedule uses $2,000 average monthly income, converted to
+$923.08 every 14 days (26 paychecks per year), anchored on October 12, 2026.
+Rent ($800) and food ($250) recur on each month's final day; subscriptions
+($50) recur on the 16th. Change the first payday in Settings to match the
+actual schedule. Old paycheck dates continue to anchor the 14-day cycle;
+only dates within the forecast are included.
+
+Forecast ranges now include 60 and 90 days, with 90 as the default.
+`PHOTON_DEMO_FORECAST_RANGE=90` sets Breezey's window; restart Next.js after
+changing environment settings. Browser range selections control the dashboard.
+Saved schedules survive restarts. Explicit income/expense arrays in a forecast
+POST override the corresponding saved assumptions, including empty arrays.
+
+Run `npm run test:schedule` and `npm run test:forecast` to check recurrence,
+month-end dates, income, and the 90-day dashboard/webhook forecast.

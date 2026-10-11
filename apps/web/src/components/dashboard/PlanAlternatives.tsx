@@ -7,7 +7,7 @@ import type { AlternativeForecastSummary, AlternativeOption, PlanAlternativesRes
 export interface PlanAlternativesProps {
   plan: Plan;
   accountId: string;
-  range: 7 | 14 | 30;
+  range: 7 | 14 | 30 | 60 | 90;
   safetyBuffer: number;
   /** The parent persists an option only after the user explicitly chooses it. */
   onApply: (option: AlternativeOption) => Promise<void>;

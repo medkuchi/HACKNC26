@@ -9,7 +9,7 @@ import type {
 export interface UseForecastOptions {
   /** Leave empty while onboarding has not selected/created an account yet. */
   accountId?: string | null;
-  range?: 7 | 14 | 30;
+  range?: 7 | 14 | 30 | 60 | 90;
   startDate?: string;
   safetyBuffer?: number;
   incomeEvents?: ForecastIncomeEvent[];
@@ -52,11 +52,11 @@ export function useForecast(options: UseForecastOptions): UseForecastResult {
   const active = options.enabled !== false && Boolean(options.accountId?.trim());
   const requestKey = active ? JSON.stringify({
     accountId: options.accountId!.trim(),
-    range: options.range ?? 30,
+    range: options.range ?? 90,
     startDate: options.startDate,
     safetyBuffer: options.safetyBuffer ?? 100,
-    incomeEvents: options.incomeEvents ?? [],
-    recurringExpenses: options.recurringExpenses ?? [],
+    incomeEvents: options.incomeEvents,
+    recurringExpenses: options.recurringExpenses,
     plannedPurchases: options.plannedPurchases ?? [],
     planIds: options.planIds,
   }) : null;

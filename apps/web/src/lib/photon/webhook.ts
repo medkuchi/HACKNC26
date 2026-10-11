@@ -8,6 +8,7 @@ import { createFinancialDataSource, toForecastInput } from "../nessie/adapters";
 import { jsonResponse, readNessieOptions } from "../nessie/config";
 import { createPlan, DEMO_USER_ID, listPlans, parseCreatePlanInput } from "../plans/store";
 import type { CreatePlanInput } from "../plans/store";
+import { scheduledEvents } from "../forecast/schedule";
 
 interface WebhookOptions {
   sharedSecret?: () => string | undefined;
@@ -15,6 +16,7 @@ interface WebhookOptions {
   loadOverview?: () => Promise<FinancialOverview>;
   safetyBuffer?: () => number;
   now?: () => Date;
+  range?: () => number;
 }
 
 class WebhookError extends Error {
@@ -100,6 +102,7 @@ export function createPhotonWebhookHandler(options: WebhookOptions = {}) {
   const overviewForDemo = options.loadOverview ?? loadDemoOverview;
   const safetyBufferForDemo = options.safetyBuffer ?? demoSafetyBuffer;
   const now = options.now ?? (() => new Date());
+  const forecastRange = options.range ?? (() => Number(process.env.PHOTON_DEMO_FORECAST_RANGE ?? 90));
   // Both cache and plans are temporary. A durable unique message key belongs in
   // the future database transaction alongside plan creation.
   const deliveries = new Map<string, { fingerprint: string; result: Promise<PhotonWebhookResult>; completedAt?: number }>();
@@ -124,7 +127,9 @@ export function createPhotonWebhookHandler(options: WebhookOptions = {}) {
       return { replyText: "That spending date is in the past. What future date should I use?" };
     }
     const end = new Date(`${startDate}T00:00:00.000Z`);
-    end.setUTCDate(end.getUTCDate() + 29);
+    const range = forecastRange();
+    if (![7, 14, 30, 60, 90].includes(range)) throw new WebhookError(503, "Invalid forecast range");
+    end.setUTCDate(end.getUTCDate() + range - 1);
     const endDate = end.toISOString().slice(0, 10);
     let overview: FinancialOverview;
     try { overview = await overviewForDemo(); }
@@ -137,13 +142,14 @@ export function createPhotonWebhookHandler(options: WebhookOptions = {}) {
     }
     if (input.expectedDate > endDate) {
       const plan = createPlan(input, DEMO_USER_ID);
-      return { planId: plan.id, replyText: `Saved "${input.name}" for ${input.expectedDate}. It is beyond the current 30-day forecast, so its impact and risk are not calculated yet.` };
+      return { planId: plan.id, replyText: `Saved "${input.name}" for ${input.expectedDate}. It is beyond the current ${range}-day forecast, so its impact and risk are not calculated yet.` };
     }
     const safetyBuffer = safetyBufferForDemo();
     const existing = listPlans(DEMO_USER_ID).filter(plan =>
       (plan.status === "tentative" || plan.status === "confirmed") && plan.currency === overview.currency);
+    const schedule = overview.currency === "USD" ? scheduledEvents({ startDate, endDate }) : { incomeEvents: [], recurringExpenses: [] };
     const baselineInput = toForecastInput(overview, { period: { startDate, endDate }, safetyBuffer,
-      incomeEvents: [], plannedPurchases: existing.map(plan => purchase(plan, plan.id)) });
+      ...schedule, plannedPurchases: existing.map(plan => purchase(plan, plan.id)) });
     const baseline = calculateProjectedCost(baselineInput);
     const projected = calculateProjectedCost({ ...baselineInput,
       plannedPurchases: [...baselineInput.plannedPurchases, purchase(input, "new-message-plan")] });
@@ -165,7 +171,8 @@ export function createPhotonWebhookHandler(options: WebhookOptions = {}) {
     // Build the reply from engine values so a second AI call cannot invent money
     // figures or fail after a plan has already been created.
     const replyText = `Saved "${input.name}" (${money(input.estimatedCost)} on ${input.expectedDate}). ${warning} ` +
-      `${overview.dataSource === "mock" ? "Demo forecast with mock data" : "30-day forecast"}; includes active ${overview.currency} plans and known bills, with no future income configured.`;
+      `${overview.dataSource === "mock" ? `Demo ${range}-day forecast with mock data` : `${range}-day forecast`}; includes active ${overview.currency} plans, known bills, and saved recurring expenses. ` +
+      (schedule.incomeEvents.length ? "Includes estimated biweekly income." : "No future income configured.");
     const plan = createPlan(input, DEMO_USER_ID, { projectedImpact, riskScore });
     return { replyText, planId: plan.id };
   }
