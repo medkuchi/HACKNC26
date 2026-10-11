@@ -4,3 +4,13 @@
 //   packages/shared/src/forecast/risk.ts.
 // - User selects alert thresholds, with inline copy explaining exactly
 //   what triggers a financial alert.
+
+import PlaceholderPage from "@/components/PlaceholderPage";
+
+export default function Page() {
+  return (
+    <PlaceholderPage
+      title="Safety preferences"
+    />
+  );
+}

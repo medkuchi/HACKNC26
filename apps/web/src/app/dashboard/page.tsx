@@ -11,3 +11,13 @@
 //   Recent spending plans — components/dashboard/PlanCard grid.
 //   Nova insights feed — components/dashboard/InsightsFeed (shortfalls,
 //     detected plans, suggested adjustments, reminders, milestones).
+
+import PlaceholderPage from "@/components/PlaceholderPage";
+
+export default function Page() {
+  return (
+    <PlaceholderPage
+      title="Dashboard"
+    />
+  );
+}

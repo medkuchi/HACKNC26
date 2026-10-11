@@ -8,3 +8,13 @@
 //   other at-risk dates.
 // - Clear "estimated" vs. "confirmed" transaction labeling/legend.
 // - Backed by GET /api/forecast (calls packages/shared forecast engine).
+
+import PlaceholderPage from "@/components/PlaceholderPage";
+
+export default function Page() {
+  return (
+    <PlaceholderPage
+      title="Financial forecast"
+    />
+  );
+}

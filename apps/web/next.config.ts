@@ -1,6 +1,12 @@
-// Next.js configuration for the Bridge web app.
-// - Enables TypeScript strict build settings.
-// - Will configure remote image domains for Nova mascot / avatar assets
-//   once hosted (e.g. Supabase Storage bucket).
-// - Env vars consumed here should stay limited to build-time/public config;
-//   secrets (Nessie key, Gemini key) must stay server-only.
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  // The shared workspace package publishes TypeScript source.
+  transpilePackages: ["@hacknc26/shared"],
+  experimental: {
+    // TypeScript 7 provides a native CLI rather than the JavaScript compiler API.
+    useTypeScriptCli: true,
+  },
+};
+
+export default nextConfig;

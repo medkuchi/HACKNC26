@@ -10,3 +10,13 @@
 //   and "View Forecast" (jumps to /dashboard/forecast scoped to this plan).
 // Example seed plan per spec: "Weekend Trip to Charlotte", $150, Travel,
 // Tentative, Saturday, $85 projected shortfall, High risk.
+
+import PlaceholderPage from "@/components/PlaceholderPage";
+
+export default function Page() {
+  return (
+    <PlaceholderPage
+      title="My plans"
+    />
+  );
+}

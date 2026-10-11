@@ -4,14 +4,15 @@ AI-powered financial companion that detects spending plans discussed in
 iMessage, forecasts their impact on the user's near-term finances, and
 alerts them privately through Nova before they commit.
 
-This repo is mostly a **scaffold**, with shared forecast/risk calculations
-and Nessie client, adapters, and customer/account/overview route handlers
-implemented. The full Next.js app and Supabase integration remain unfinished.
+The forecast/risk engine, Nessie routes, plans CRUD, client hooks, and Photon
+worker/webhook are implemented for a single-user demo. The web app has a
+temporary homepage for checking startup and API responses; the Figma UI and
+Supabase integration remain unfinished.
 
 ## Structure
 
-- `apps/web` — Next.js + TypeScript + Tailwind web app (landing, auth,
-  onboarding, dashboard, API routes).
+- `apps/web` — Next.js + TypeScript web app, temporary homepage, and API
+  routes. The landing, onboarding, and dashboard screens are still to come.
 - `apps/photon-agent` — persistent Node.js worker running the Photon
   Spectrum SDK iMessage agent for Nova.
 - `packages/shared` — deterministic forecast engine, risk scoring, and
@@ -25,16 +26,63 @@ Next.js, React, TypeScript, Tailwind CSS, shadcn/ui, Recharts, Supabase
 Spectrum SDK, deployed on Vercel (web) + a persistent Node service
 (Photon agent).
 
-## Getting started
+## Running the web app locally
+
+From the repository root:
 
 ```bash
 npm install
+cp -n apps/web/.env.example apps/web/.env.local
+npm run dev --workspace @hacknc26/web
 ```
 
-Copy `.env.example` to `.env.local` in `apps/web` and `.env` in
-`apps/photon-agent`, filling in credentials. Where credentials are
-missing, mock adapters (`USE_MOCK_NESSIE`, `USE_MOCK_GEMINI`) let
-development continue without pretending mock data is real.
+`cp -n` leaves an existing `.env.local` unchanged. Open
+[http://localhost:3000](http://localhost:3000) to see the temporary homepage and
+try its API checks. The example settings enable mock Nessie and Gemini, so
+these checks do not require API keys. The mock account ID is `demo`.
+
+## Setting API keys
+
+Edit `apps/web/.env.local`, not `.env.example`. Next.js loads this local file
+for the web app. To enable live Gemini, use:
+
+```dotenv
+GOOGLE_GEMINI_API_KEY=your_gemini_key
+USE_MOCK_GEMINI=false
+```
+
+Create or view your key in [Google AI Studio](https://aistudio.google.com/apikey)
+using Google's [API key guide](https://ai.google.dev/gemini-api/docs/api-key).
+This app reads `GOOGLE_GEMINI_API_KEY` explicitly; keep that exact name.
+`GEMINI_MODEL` is optional and defaults to the model in the example file.
+
+To enable live Nessie, set:
+
+```dotenv
+NESSIE_API_KEY=your_nessie_key
+NESSIE_BASE_URL=https://your-nessie-api-host
+USE_MOCK_NESSIE=false
+PHOTON_DEMO_ACCOUNT_ID=your_nessie_checking_or_savings_account_id
+```
+
+Replace the example host with the HTTPS API base URL provided for your Nessie
+environment. `PHOTON_DEMO_ACCOUNT_ID` selects the single-user webhook's account;
+use that same account ID when checking live account, overview, or forecast
+routes. `PHOTON_DEMO_SAFETY_BUFFER` defaults to 100. Adding an API key while its
+`USE_MOCK_*` flag is still `true` continues to use mock data. Each service can
+be switched independently.
+
+For the Photon worker, copy `apps/photon-agent/.env.example` to
+`apps/photon-agent/.env` and enter its Photon credentials. Set
+`BRIDGE_API_BASE_URL=http://localhost:3000` for local development and use the
+same `PHOTON_AGENT_SHARED_SECRET` in both environment files. The secret is
+required for webhook calls; it is separate from either provider's API key.
+Supabase settings can stay blank while authentication and persistence are
+deferred.
+
+Stop the development server with Ctrl+C and restart it after editing
+environment variables. Keep API keys and the shared secret server-side: do
+not give them a `NEXT_PUBLIC_` prefix or commit local environment files.
 
 ## Testing Nessie routes
 
@@ -63,8 +111,8 @@ are commented out until its client and database schema are implemented.
 Callers keep returned IDs. Created mock accounts are kept in server memory
 and disappear when that process restarts; other mock IDs use the $500 demo
 checking fixture. API mode requires `USE_MOCK_NESSIE=false`, `NESSIE_API_KEY`,
-and an HTTPS `NESSIE_BASE_URL`. The Next.js dependencies and startup scripts
-must be configured before testing these URLs through a running app.
+and an HTTPS `NESSIE_BASE_URL`. Start the web app with the command above to
+test these URLs through a running app.
 
 ## Forecast route
 

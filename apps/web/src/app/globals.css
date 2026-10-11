@@ -5,3 +5,37 @@
      tailwind.config.ts theme.extend.colors.
    - Reusable utility classes for "glossy" card surfaces, soft shadows,
      and gentle hover transitions used across dashboard + landing page. */
+
+:root { color-scheme: light; font-family: Arial, Helvetica, sans-serif; color: #16334a; background: #f0f7fb; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.page-shell { width: min(900px, calc(100% - 40px)); margin: 64px auto; }
+.card { padding: 32px; background: white; border: 1px solid #dce8ef; border-radius: 20px; margin-bottom: 24px; }
+.introduction { background: linear-gradient(130deg, #e4f5ff, #f5fffa); }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #33677e; }
+h1 { font-size: clamp(30px, 5vw, 44px); letter-spacing: -.04em; margin: 18px 0; }
+h2 { font-size: 24px; margin: 8px 0; }
+p { line-height: 1.6; }
+a { color: #006998; text-underline-offset: 3px; }
+.section-heading, .api-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+button { border: 0; border-radius: 10px; padding: 13px 18px; font: inherit; font-weight: 700; color: white; background: #12688a; cursor: pointer; }
+button:disabled { opacity: .65; cursor: wait; }
+.account-label { display: block; margin-top: 22px; margin-bottom: 8px; font-size: 14px; font-weight: 700; }
+input { width: min(100%, 400px); padding: 12px; border: 1px solid #b8cad6; border-radius: 8px; font: inherit; }
+.muted, footer { color: #58707e; font-size: 14px; }
+.api-list { list-style: none; padding: 0; margin: 24px 0; }
+.api-list li { border-top: 1px solid #e1ebf0; padding: 20px 0; }
+.api-row a { display: block; margin-top: 7px; font-size: 14px; }
+.status { border-radius: 20px; padding: 7px 12px; font-size: 12px; background: #f0f5f7; white-space: nowrap; }
+.passed { color: #155d3d; background: #e6f7eb; }
+.failed { color: #942d2d; background: #fff0f0; }
+details { margin-top: 16px; }
+summary { cursor: pointer; font-size: 14px; }
+pre { overflow: auto; max-height: 360px; background: #f4f8fa; padding: 16px; border-radius: 10px; font-size: 12px; line-height: 1.5; }
+footer { text-align: center; }
+:focus-visible { outline: 3px solid #43a8d2; outline-offset: 3px; }
+@media (max-width: 600px) {
+  .page-shell { margin-top: 24px; }
+  .card { padding: 22px; }
+  .section-heading { align-items: flex-start; flex-direction: column; }
+}

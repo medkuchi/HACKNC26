@@ -5,3 +5,13 @@
 //   in to spending-plan monitoring, with per-conversation toggle.
 // - Optional: lightweight transcript of recent Nova <-> user exchanges
 //   for transparency (what Nova detected and why).
+
+import PlaceholderPage from "@/components/PlaceholderPage";
+
+export default function Page() {
+  return (
+    <PlaceholderPage
+      title="Nova and iMessage"
+    />
+  );
+}

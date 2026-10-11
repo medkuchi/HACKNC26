@@ -5,3 +5,13 @@
 // - Linked Nessie account info (read-only, simulated-data disclaimer).
 // - Privacy controls: revoke iMessage monitoring, delete processed
 //   message metadata, data-export/delete-account entry points.
+
+import PlaceholderPage from "@/components/PlaceholderPage";
+
+export default function Page() {
+  return (
+    <PlaceholderPage
+      title="Settings"
+    />
+  );
+}
