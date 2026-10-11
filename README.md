@@ -110,3 +110,28 @@ source. Test the route and engine without API access using:
 ```bash
 npm run test:forecast
 ```
+
+## Photon client
+
+`apps/photon-agent/src/photon/client.ts` uses `spectrum-ts` with its iMessage
+provider. `PHOTON_PROJECT_ID` is the Spectrum Cloud project ID and
+`PHOTON_API_KEY` holds that project's secret (not a per-line token).
+
+Call `getPhotonClient(loadConfig())` at worker startup to share one client.
+Consume `client.messages` as `[space, message]` pairs; only inbound iMessage
+events are yielded. `client.sendText(space, text)` sends to an existing
+conversation, and `client.reply(message, text)` replies to an inbound message.
+The handler layer still needs to enforce pairing and conversation consent.
+Call `stopPhotonClient()` during shutdown. Importing the module alone does not
+connect, send messages, or install signal handlers. Worker entry-point wiring
+and automatic reconnect remain separate work.
+
+Run config, logger, and client tests without contacting Photon:
+
+```bash
+npm run test:agent
+npm run typecheck --workspace @hacknc26/photon-agent
+```
+
+The agent uses `skipLibCheck` for the SDK's bundled declaration errors;
+strict checks still apply to the agent's source.
