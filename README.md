@@ -135,3 +135,38 @@ npm run typecheck --workspace @hacknc26/photon-agent
 
 The agent uses `skipLibCheck` for the SDK's bundled declaration errors;
 strict checks still apply to the agent's source.
+
+The agent's `services/bridgeApiClient.ts` exposes
+`createBridgeApiClient(loadConfig())`, with `verifyPairingCode(code)` and
+`forwardMessage(event)`. Requests use `Authorization: Bearer` with
+`PHOTON_AGENT_SHARED_SECRET`, a 10-second default timeout, response validation,
+and no automatic retries. Both worker and web app must use the same secret.
+Only operational metadata is logged; request bodies and pairing codes are not.
+
+Pairing verification uses `PATCH /api/pairing` with `{ code }`, matching the
+existing route. Message forwarding uses `POST /api/photon/webhook` with
+`messageId`, `userId`, `senderId`, `conversationId`, `isGroup`, and `text`.
+The response contract is `{ replyText: string | null, planId?: string }`;
+null means no reply. These contracts are shared in
+`packages/shared/src/types/photon.ts`. Pairing and conversation consent must be
+checked by the handler before forwarding a message.
+
+Live forwarding still requires implementation of the backend webhook handler.
+The existing pairing route also needs server-side shared-secret verification;
+sending the header alone does not add that enforcement. Client tests run
+offline as part of `npm run test:agent`.
+
+`services/pairing.ts` provides `createPairingService(bridge)` and
+`extractPairingCode(text)`. The service's `handleMessage()` accepts an inbound
+message's `senderId`, `conversationId`, `isGroup`, and `text`. It recognizes a
+whole six-digit message or `pair 123456`, verifies it through the Bridge API,
+and links the verified sender in the identity map. Group attempts, missing
+senders, invalid/expired codes, conflicts, and backend failures return explicit
+outcomes. Pairing does not enable conversation monitoring. The caller sends
+the returned `replyText`; ordinary messages return `{ handled: false }`.
+
+Concurrent duplicate attempts share verification; a different code from the
+same sender returns busy. The initiating attempt's cancellation applies to
+shared verification. Backend failures advise generating a fresh code because
+the previous request may already have consumed it. No raw codes are logged or
+persisted. Pairing is not yet wired into the worker's message handler.
