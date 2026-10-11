@@ -9,7 +9,8 @@
   ],
   "scripts": {
     "test:nessie": "node scripts/test-nessie.cjs",
-    "test:forecast": "node scripts/test-nessie.cjs forecast"
+    "test:forecast": "node scripts/test-nessie.cjs forecast",
+    "test:plans": "node scripts/test-nessie.cjs plans"
   },
   "dependencies": {
     "typescript": "^7.0.2"
