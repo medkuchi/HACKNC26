@@ -54,7 +54,7 @@ export default function PlanAlternatives({ plan, accountId, range, safetyBuffer,
     const controller = new AbortController();
     setState({ key: requestKey, phase: "loading", result: null, error: null });
     async function generate() {
-      let failureMessage = "Nova couldn’t generate alternatives. Please try again.";
+      let failureMessage = "Breezey couldn’t generate alternatives. Please try again.";
       try {
         const response = await fetch(`/api/plans/${encodeURIComponent(plan.id)}/alternatives`, {
           method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store",
@@ -115,7 +115,7 @@ export default function PlanAlternatives({ plan, accountId, range, safetyBuffer,
         {phase === "loading" ? "Generating…" : phase === "error" ? "Try again" : result ? "Generate again" : "Generate alternatives"}
       </button>
     </div>
-    {phase === "loading" && <p className="alternatives-status" role="status">Nova is generating alternatives and comparing their forecasts…</p>}
+    {phase === "loading" && <p className="alternatives-status" role="status">Breezey is generating alternatives and comparing their forecasts…</p>}
     {phase === "error" && <p className="alternatives-status red" role="alert">{state.error}</p>}
     {result && <><p className="alternatives-source">{result.generationSource === "gemini" ? "Gemini suggestions" : "Demo suggestions"}
       {" · "}Forecast uses simulated account data{" · "}

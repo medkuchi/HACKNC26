@@ -78,7 +78,7 @@ const tabs = [
   { href: "/dashboard/forecast", label: "Financial Forecast", icon: "chart" },
   { href: "/dashboard/transactions", label: "Transactions", icon: "swap" },
   { href: "/dashboard/action-center", label: "Action Center", icon: "inbox" },
-  { href: "/dashboard/nova", label: "Nova / iMessage", icon: "phone" },
+  { href: "/dashboard/nova", label: "Breezey / iMessage", icon: "phone" },
   { href: "/dashboard/settings", label: "Settings", icon: "settings" },
 ] as const;
 export default function DashboardShell({ children }: { children: ReactNode }) {
@@ -86,7 +86,7 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   const data = useDashboardData();
   const { preferences, overview } = data;
   const initials = preferences.name.split(/\s+/).map(part => part[0]).join("").slice(0, 2);
-  const brand = <><span className="brand-mascot"><NovaMascot size={40} label="Bridge mascot" /></span><strong>Bridge</strong></>;
+  const brand = <><span className="brand-mascot"><NovaMascot size={40} label="Breezey mascot" /></span><strong>Breezey</strong></>;
   return <DashboardContext.Provider value={data}><div className="bridge-dashboard app-shell">
     <nav className="top-tabs" aria-label="Primary navigation"><div className="tabs-inner">
       <Link className="brand compact-brand" href="/dashboard">{brand}</Link>
