@@ -232,6 +232,14 @@ only their messages in that conversation, including a specifically selected
 group; they do not authorize other participants. Replies triggered by group
 messages are delivered privately using the same agent phone line. Backend
 replies are suppressed if consent or pairing is revoked while processing.
+
+Inline text replies are accepted, using only the sender’s new text rather than
+the quoted message. Worker receipt logs include `conversationType` (`dm` or
+`group`); consent logs also include `monitoringEnabled`. Failure logs record the
+processing stage in `eventType`. Consent is committed before its private
+confirmation is sent, so a delivery failure does not undo monitoring consent.
+Shared-pool group delivery must be checked separately with Photon; offline
+handler tests do not verify that live transport.
 Aborting `run()` stops the client and waits for shutdown. Worker `index.ts`
 wires startup and signal handlers; the backend webhook handles spending plans
 for the paired `demo-user` profile.

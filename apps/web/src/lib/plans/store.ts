@@ -1,7 +1,11 @@
 import type { Plan, PlanSource, PlanStatus } from "@hacknc26/shared";
 
-/** Single-user demo storage. Restarting the server clears these plans. */
-const plans = new Map<string, Plan>();
+// Route bundles and hot reloads can evaluate this module separately. Keep one
+// demo map per server process; restarting the process still clears all plans.
+const globalForPlans = globalThis as typeof globalThis & {
+  __hacknc26DemoPlans?: Map<string, Plan>;
+};
+const plans = globalForPlans.__hacknc26DemoPlans ??= new Map<string, Plan>();
 export const DEMO_USER_ID = "demo-user";
 
 export interface CreatePlanInput {

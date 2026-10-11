@@ -2,6 +2,8 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { calculateProjectedCost, calculateRiskScore } from "@hacknc26/shared";
 import type { FinancialOverview, ForecastPlannedPurchase, PhotonMessageEvent, PhotonWebhookResult } from "@hacknc26/shared";
 import { detectSpendingIntent } from "../gemini/intentDetection";
+import { classifyGeminiError } from "../gemini/errors";
+import type { GeminiFailureCode } from "../gemini/errors";
 import { createFinancialDataSource, toForecastInput } from "../nessie/adapters";
 import { jsonResponse, readNessieOptions } from "../nessie/config";
 import { createPlan, DEMO_USER_ID, listPlans, parseCreatePlanInput } from "../plans/store";
@@ -16,7 +18,7 @@ interface WebhookOptions {
 }
 
 class WebhookError extends Error {
-  constructor(readonly status: number, message: string) { super(message); }
+  constructor(readonly status: number, message: string, readonly code?: GeminiFailureCode) { super(message); }
 }
 
 async function loadDemoOverview(): Promise<FinancialOverview> {
@@ -108,7 +110,10 @@ export function createPhotonWebhookHandler(options: WebhookOptions = {}) {
     const startDate = now().toISOString().slice(0, 10);
     let detected: unknown;
     try { detected = await detect(event.text, startDate); }
-    catch { throw new WebhookError(502, "Unable to analyze the message"); }
+    catch (error) {
+      const failure = classifyGeminiError(error);
+      throw new WebhookError(502, failure.message, failure.code);
+    }
     let input: CreatePlanInput | null;
     try { input = detectedPlan(detected, event); }
     catch {
@@ -209,7 +214,8 @@ export function createPhotonWebhookHandler(options: WebhookOptions = {}) {
     } catch (error) {
       // Another waiter may already have cleared this failed delivery.
       if (deliveries.get(key) === entry) deliveries.delete(key);
-      return jsonResponse({ error: error instanceof WebhookError ? error.message : "Unable to process the message" },
+      return jsonResponse({ error: error instanceof WebhookError ? error.message : "Unable to process the message",
+        ...(error instanceof WebhookError && error.code ? { code: error.code } : {}) },
         error instanceof WebhookError ? error.status : 500);
     }
   };

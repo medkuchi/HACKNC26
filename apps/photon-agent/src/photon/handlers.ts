@@ -49,21 +49,28 @@ export function createPhotonHandlers(
 
   async function handleMessage(space: Space, message: Message,
     requestOptions: BridgeRequestOptions = {}): Promise<MessageHandlingResult> {
-    const ignored = (reason: string): MessageHandlingResult => ({ status: "ignored", reason });
+    const ignored = (reason: string): MessageHandlingResult => {
+      log.info("message.ignored", { eventType: reason });
+      return { status: "ignored", reason };
+    };
     if (requestOptions.signal?.aborted) return { status: "canceled" };
     if (message.platform !== "imessage" || space.__platform !== "imessage" ||
         message.direction !== "inbound" || message.sender?.kind === "agent") return ignored("not_inbound_imessage");
-    if (message.content.type !== "text" || !message.content.text.trim()) return ignored("unsupported_content");
+    // Inline iMessage replies wrap the sender's new content. Never analyze the
+    // quoted target, which may belong to another person in the group.
+    const content = message.content.type === "reply" ? message.content.content : message.content;
+    if (content.type !== "text" || !content.text.trim()) return ignored("unsupported_content");
     const senderId = message.sender?.id?.trim();
     if (!senderId || !space.id?.trim() || !message.id?.trim() || message.space.id !== space.id) return ignored("unidentified");
     const type = (space as Space & { type?: unknown }).type;
     if (type !== "dm" && type !== "group") return ignored("unknown_conversation_type");
     const isGroup = type === "group";
-    const text = message.content.text;
+    const text = content.text;
     const key = JSON.stringify([space.id, message.id]);
     if (inFlight.has(key) || completed.has(key)) return { status: "duplicate" };
     inFlight.add(key);
-    const metadata = { senderId, conversationId: space.id, requestId: message.id };
+    const metadata = { senderId, conversationId: space.id, requestId: message.id, conversationType: type } as const;
+    log.info("message.received", metadata);
     let stage: "pairing" | "consent" | "backend" | "delivery" = "pairing";
     const sendReply = async (replyText: string | null): Promise<boolean> => {
       if (replyText === null || requestOptions.signal?.aborted) return false;
@@ -84,7 +91,7 @@ export function createPhotonHandlers(
         if (!identities.getUserId(senderId)) return ignored("pairing_required");
         const enabled = consentCommand[1].toLowerCase() === "on";
         identities.setConversationConsent(senderId, space.id, enabled);
-        log.info("message.consent_changed", metadata);
+        log.info("message.consent_changed", { ...metadata, monitoringEnabled: enabled });
         stage = "delivery";
         return { status: "consent", enabled, replySent: await sendReply(enabled ?
           "Monitoring is enabled for your messages in this conversation. Alerts are sent privately." :
@@ -104,7 +111,7 @@ export function createPhotonHandlers(
       return { status: "forwarded", replySent, ...(result.planId ? { planId: result.planId } : {}) };
     } catch (error) {
       if (requestOptions.signal?.aborted) return { status: "canceled" };
-      log.error("message.processing_failed", { ...metadata, error });
+      log.error("message.processing_failed", { ...metadata, eventType: stage, error });
       return { status: "failed", stage };
     } finally {
       inFlight.delete(key);

@@ -1,4 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { RequestOptions } from "@google/generative-ai";
+import { classifyGeminiError, GeminiServiceError } from "./errors";
 
 export interface GenerateTextOptions {
   /** Ask Gemini to return JSON instead of free-form text. */
@@ -24,7 +26,7 @@ export async function generateText(
   // not keep using values captured when the module was first imported.
   const mockSetting = process.env.USE_MOCK_GEMINI;
   if (mockSetting !== undefined && mockSetting !== "true" && mockSetting !== "false") {
-    throw new Error("USE_MOCK_GEMINI must be true or false.");
+    throw new GeminiServiceError("GEMINI_CONFIGURATION_ERROR");
   }
   const apiKey = process.env.GOOGLE_GEMINI_API_KEY?.trim();
   const useMock = mockSetting === "true" || (mockSetting === undefined && !apiKey);
@@ -32,20 +34,26 @@ export async function generateText(
     return mockGenerate(options);
   }
   if (!apiKey) {
-    throw new Error("GOOGLE_GEMINI_API_KEY is required when USE_MOCK_GEMINI is false.");
+    throw new GeminiServiceError("GEMINI_CONFIGURATION_ERROR");
   }
 
-  const modelName = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
-  const model = getClient(apiKey).getGenerativeModel(
-    {
-      model: modelName,
-      ...(options.json ? { generationConfig: { responseMimeType: "application/json" } } : {}),
-    },
-    { timeout: 8_000 },
-  );
-
-  const result = await model.generateContent(prompt);
-  return result.response.text();
+  const modelName = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
+  const signal = AbortSignal.timeout(8_000);
+  // The installed SDK handles signal at runtime but omits it from its typings.
+  const requestOptions: RequestOptions & { signal: AbortSignal } = { signal };
+  try {
+    const model = getClient(apiKey).getGenerativeModel(
+      {
+        model: modelName,
+        ...(options.json ? { generationConfig: { responseMimeType: "application/json" } } : {}),
+      },
+      requestOptions,
+    );
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    throw classifyGeminiError(error, signal.aborted);
+  }
 }
 
 function mockGenerate(options: GenerateTextOptions): string {

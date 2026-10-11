@@ -4,6 +4,8 @@ export type LogLevel = "debug" | "info" | "warn" | "error";
 export interface LogMetadata {
   senderId?: string;
   conversationId?: string;
+  conversationType?: "dm" | "group";
+  monitoringEnabled?: boolean;
   eventType?: string;
   requestId?: string;
   planId?: string;
@@ -58,6 +60,10 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     for (const key of ["attempt", "durationMs", "statusCode"] as const) {
       if (typeof metadata[key] === "number" && Number.isFinite(metadata[key])) fields[key] = metadata[key];
     }
+    if (metadata.conversationType === "dm" || metadata.conversationType === "group") {
+      fields.conversationType = metadata.conversationType;
+    }
+    if (typeof metadata.monitoringEnabled === "boolean") fields.monitoringEnabled = metadata.monitoringEnabled;
     if (metadata.error !== undefined) fields.error = summarizeError(metadata.error);
     write(JSON.stringify({ timestamp: now().toISOString(), level, service: "photon-agent", event,
       ...(Object.keys(fields).length ? { metadata: fields } : {}) }), level);
