@@ -3,6 +3,7 @@
 
 export * from "./user";
 export type * from "./plan";
+export type * from "./photon";
 export type * from "./nessie";
 
 export type * from "../forecast/types";
