@@ -8,5 +8,8 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.5"
+  },
+  "dependencies": {
+    "spectrum-ts": "^12.10.1"
   }
 }
