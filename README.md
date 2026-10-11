@@ -123,8 +123,8 @@ events are yielded. `client.sendText(space, text)` sends to an existing
 conversation, and `client.reply(message, text)` replies to an inbound message.
 The handler layer still needs to enforce pairing and conversation consent.
 Call `stopPhotonClient()` during shutdown. Importing the module alone does not
-connect, send messages, or install signal handlers. Worker entry-point wiring
-and automatic reconnect remain separate work.
+connect, send messages, or install signal handlers. The worker entry point
+starts this client and reconnects after terminal stream failures.
 
 Run config, logger, and client tests without contacting Photon:
 
@@ -184,5 +184,31 @@ group; they do not authorize other participants. Replies triggered by group
 messages are delivered privately using the same agent phone line. Backend
 replies are suppressed if consent or pairing is revoked while processing.
 Aborting `run()` stops the client and waits for shutdown. Worker `index.ts`
-still needs startup and signal-handler wiring; the backend message webhook
-also remains to be implemented.
+wires startup and signal handlers; the backend message webhook remains to be
+implemented.
+
+## Running the Photon worker
+
+Copy `apps/photon-agent/.env.example` to `apps/photon-agent/.env` and fill in
+the project ID, project secret, Bridge backend URL, and shared secret. Requires
+Node 22 or later. From the repository root, start development mode with:
+
+```bash
+npm run dev --workspace @hacknc26/photon-agent
+```
+
+Or build and run the compiled worker:
+
+```bash
+npm run build --workspace @hacknc26/photon-agent
+npm run start --workspace @hacknc26/photon-agent
+```
+
+The entry point loads configuration, creates the backend client, and consumes
+incoming messages. It preserves pairing, consent, and handler deduplication
+across Photon reconnects. Terminal failures close the old client before up to
+five reconnect attempts, with delays starting at one second and capped at
+30 seconds. A connection lasting at least a minute resets the retry count.
+Ctrl+C or SIGTERM aborts processing and closes the client, with a 15-second
+escape timeout for stalled cleanup. A fatal failure exits with a nonzero code.
+Running these commands connects to Photon; `npm run test:agent` stays offline.
