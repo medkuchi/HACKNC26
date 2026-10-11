@@ -1,5 +1,6 @@
 import { compareForecasts } from "@hacknc26/shared";
 import { parseForecastRequest } from "../../../lib/forecast/request";
+import { scheduledEvents } from "../../../lib/forecast/schedule";
 import { CashAccountRequiredError, createFinancialDataSource, toForecastInput } from "../../../lib/nessie/adapters";
 import { jsonResponse, readNessieOptions } from "../../../lib/nessie/config";
 
@@ -26,6 +27,10 @@ async function calculate(value: unknown): Promise<Response> {
   let input;
   try {
     overview = await createFinancialDataSource(options).getFinancialOverview(parsed.accountId);
+    const schedules = overview.currency === "USD" ? scheduledEvents(parsed.setup.period) : { incomeEvents: [], recurringExpenses: [] };
+    const row = value as Record<string, unknown>;
+    if (row.incomeEvents === undefined) parsed.setup.incomeEvents = schedules.incomeEvents;
+    if (row.recurringExpenses === undefined) parsed.setup.recurringExpenses = schedules.recurringExpenses;
     input = toForecastInput(overview, parsed.setup);
   } catch (error) {
     if (error instanceof CashAccountRequiredError) return jsonResponse({ error: error.message }, 400);

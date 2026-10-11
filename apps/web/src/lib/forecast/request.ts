@@ -64,8 +64,8 @@ function recurring(value: unknown): ForecastRecurringExpense {
 export function parseForecastRequest(value: unknown): { accountId: string; setup: ForecastSetup } {
   const row = object(value);
   const accountId = text(row.accountId, "accountId");
-  const range = row.range ?? 30;
-  if (range !== 7 && range !== 14 && range !== 30) throw new TypeError("range must be 7, 14, or 30");
+  const range = row.range ?? 90;
+  if (range !== 7 && range !== 14 && range !== 30 && range !== 60 && range !== 90) throw new TypeError("range must be 7, 14, 30, 60, or 90");
   // Calendar dates use UTC by default; callers can supply their own local date.
   const startDate = date(row.startDate ?? new Date().toISOString().slice(0, 10), "startDate");
   const end = new Date(`${startDate}T00:00:00.000Z`);

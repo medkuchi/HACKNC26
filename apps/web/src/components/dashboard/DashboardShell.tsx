@@ -9,8 +9,8 @@ import { useForecast } from "@/hooks/useForecast";
 import { Icon, NovaMascot } from "./Design";
 import "./dashboard.css";
 
-export interface Preferences { accountId: string; name: string; workspace: string; safetyBuffer: number; range: 7 | 14 | 30 }
-const defaults: Preferences = { accountId: "demo", name: "Demo User", workspace: "Demo workspace", safetyBuffer: 100, range: 14 };
+export interface Preferences { accountId: string; name: string; workspace: string; safetyBuffer: number; range: 7 | 14 | 30 | 60 | 90 }
+const defaults: Preferences = { accountId: "demo", name: "Demo User", workspace: "Demo workspace", safetyBuffer: 100, range: 90 };
 function useDashboardData() {
   const [preferences, setPreferences] = useState(defaults);
   const [ready, setReady] = useState(false);
@@ -25,8 +25,10 @@ function useDashboardData() {
       const saved = JSON.parse(localStorage.getItem("bridge-dashboard-preferences") ?? "null");
       if (saved && typeof saved.accountId === "string" && saved.accountId.trim() &&
           typeof saved.name === "string" && typeof saved.workspace === "string" &&
-          Number.isFinite(saved.safetyBuffer) && saved.safetyBuffer >= 0 && [7, 14, 30].includes(saved.range)) {
-        setPreferences(saved);
+          Number.isFinite(saved.safetyBuffer) && saved.safetyBuffer >= 0 && [7, 14, 30, 60, 90].includes(saved.range)) {
+        const migrated = { ...saved, range: saved.forecastDefaultVersion === 90 ? saved.range : 90 };
+        setPreferences(migrated);
+        localStorage.setItem("bridge-dashboard-preferences", JSON.stringify({ ...migrated, forecastDefaultVersion: 90 }));
       }
     } catch { /* Missing or invalid local preferences use the demo defaults. */ }
     setReady(true);
@@ -58,11 +60,11 @@ function useDashboardData() {
     })) });
   function savePreferences(value: Preferences) {
     // Save before changing state so a storage failure cannot report success.
-    localStorage.setItem("bridge-dashboard-preferences", JSON.stringify(value));
+    localStorage.setItem("bridge-dashboard-preferences", JSON.stringify({ ...value, forecastDefaultVersion: 90 }));
     setPreferences(value);
   }
   return { preferences, savePreferences, overview, accountError, accountLoading, plans, ...forecast,
-    setRange: (range: 7 | 14 | 30) => setPreferences(current => ({ ...current, range })),
+    setRange: (range: 7 | 14 | 30 | 60 | 90) => setPreferences(current => ({ ...current, range })),
     refreshAll: () => { setRefresh(value => value + 1); plans.refetch(); forecast.refetch(); } };
 }
 type DashboardData = ReturnType<typeof useDashboardData>;
@@ -78,7 +80,6 @@ const tabs = [
   { href: "/dashboard/forecast", label: "Financial Forecast", icon: "chart" },
   { href: "/dashboard/transactions", label: "Transactions", icon: "swap" },
   { href: "/dashboard/action-center", label: "Action Center", icon: "inbox" },
-  { href: "/dashboard/nova", label: "Breezey / iMessage", icon: "phone" },
   { href: "/dashboard/settings", label: "Settings", icon: "settings" },
 ] as const;
 export default function DashboardShell({ children }: { children: ReactNode }) {
